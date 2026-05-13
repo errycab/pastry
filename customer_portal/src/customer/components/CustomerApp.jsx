@@ -70,9 +70,9 @@ export default function CustomerApp() {
 
       {/* ROUTES */}
       <Routes>
-        <Route path="/" element={<Dashboard onAddToCart={addToCart} />} />
-        <Route path="/menu" element={<Menu onAddToCart={addToCart} />} />
-        <Route path="/orders" element={<Orders />} />
+        <Route index element={<Dashboard onAddToCart={addToCart} />} />
+        <Route path="menu" element={<Menu onAddToCart={addToCart} />} />
+        <Route path="orders" element={<Orders />} />
       </Routes>
 
       {/* CART MODAL */}

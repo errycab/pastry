@@ -11,6 +11,7 @@ import markerShadow from "leaflet/dist/images/marker-shadow.png";
 
 // Fix Leaflet default icon issue
 delete L.Icon.Default.prototype._getIconUrl;
+
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: markerIcon2x,
   iconUrl: markerIcon,
@@ -25,6 +26,7 @@ export default function CheckoutModal({
   onOrderPlaced,
 }) {
   const [loading, setLoading] = useState(false);
+
   const [checkoutData, setCheckoutData] = useState({
     method: "Deliver",
     payment: "COD",
@@ -36,65 +38,168 @@ export default function CheckoutModal({
 
   const mapRef = useRef(null);
 
-  // --- MAP INITIALIZATION ---
+  /* =========================
+     MAP INITIALIZATION
+  ========================= */
   useEffect(() => {
-    if (!isOpen || checkoutData.method !== "Deliver") return;
+    if (!isOpen) return;
 
-    if (!mapRef.current) {
-      const map = L.map("checkout-map", {
-        center: [13.7565, 121.0583],
-        zoom: 12,
-      });
-      mapRef.current = map;
+    if (checkoutData.method === "Deliver") {
+      let mapInstance = mapRef.current;
 
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+      // CREATE MAP IF NOT EXISTS
+      if (!mapInstance) {
+        mapInstance = L.map("checkout-map").setView(
+          [13.7565, 121.0583],
+          12
+        );
 
-      const marker = L.marker([13.7565, 121.0583], { draggable: true }).addTo(map);
-      marker.on("dragend", () => {
-        const pos = marker.getLatLng();
-        setCheckoutData((prev) => ({ ...prev, lat: pos.lat, lng: pos.lng }));
-      });
+        L.tileLayer(
+          "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+          {
+            attribution: "&copy; OpenStreetMap contributors",
+          }
+        ).addTo(mapInstance);
 
-      setTimeout(() => map.invalidateSize(), 200);
+        const marker = L.marker([13.7565, 121.0583], {
+          draggable: true,
+        }).addTo(mapInstance);
 
-      return () => map.remove();
+        // REVERSE GEOCODING FUNCTION
+        const reverseGeocode = async (lat, lng) => {
+          try {
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+              {
+                headers: {
+                  'User-Agent': 'PastryShop/1.0'
+                }
+              }
+            );
+
+            if (response.ok) {
+              const data = await response.json();
+              return data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+            }
+          } catch (error) {
+            console.error('Reverse geocoding failed:', error);
+          }
+          return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        };
+
+        marker.on("dragend", async () => {
+          const pos = marker.getLatLng();
+          const lat = pos.lat;
+          const lng = pos.lng;
+
+          // GET ADDRESS VIA REVERSE GEOCODING
+          const address = await reverseGeocode(lat, lng);
+
+          setCheckoutData((prev) => ({
+            ...prev,
+            lat: lat,
+            lng: lng,
+            address: address,
+          }));
+        });
+
+        mapRef.current = mapInstance;
+
+        // INITIAL REVERSE GEOCODING FOR DEFAULT LOCATION
+        reverseGeocode(13.7565, 121.0583).then((address) => {
+          setCheckoutData((prev) => ({
+            ...prev,
+            address: address,
+            lat: 13.7565,
+            lng: 121.0583,
+          }));
+        });
+      }
+
+      // FIX SIZE AFTER SWITCHING TO DELIVER
+      const timer = setTimeout(() => {
+        if (mapRef.current) {
+          mapRef.current.invalidateSize();
+        }
+      }, 300);
+
+      return () => clearTimeout(timer);
     } else {
-      mapRef.current.invalidateSize();
+      // REMOVE MAP WHEN SWITCHING AWAY FROM DELIVER
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
     }
   }, [isOpen, checkoutData.method]);
 
-  // --- GROUP ITEMS ---
+  /* =========================
+     CLEANUP MAP ON MODAL CLOSE
+  ========================= */
+  useEffect(() => {
+    if (!isOpen && mapRef.current) {
+      mapRef.current.remove();
+      mapRef.current = null;
+    }
+  }, [isOpen]);
+
+  /* =========================
+     GROUP ITEMS
+  ========================= */
   const groupedItems = useMemo(() => {
     const grouped = {};
+
     cartItems.forEach((item) => {
       const key = JSON.stringify({
         name: item.name,
         variant: item.variant,
         selectionDetails: item.selectionDetails || {},
       });
-      if (!grouped[key]) grouped[key] = { ...item, qty: 1 };
-      else grouped[key].qty += 1;
+
+      if (!grouped[key]) {
+        grouped[key] = { ...item, qty: 1 };
+      } else {
+        grouped[key].qty += 1;
+      }
     });
+
     return Object.values(grouped);
   }, [cartItems]);
 
-  const subtotal = cartItems.reduce((sum, item) => sum + Number(item.price || 0), 0);
-  const deliveryFee = checkoutData.method === "Deliver" && cartItems.length > 0 ? 45 : 0;
+  const subtotal = cartItems.reduce(
+    (sum, item) => sum + Number(item.price || 0),
+    0
+  );
+
+  const deliveryFee =
+    checkoutData.method === "Deliver" && cartItems.length > 0
+      ? 45
+      : 0;
+
   const total = subtotal + deliveryFee;
 
-  // --- PLACE ORDER ---
+  /* =========================
+     PLACE ORDER
+  ========================= */
   const handlePlaceOrder = async () => {
+
     if (!checkoutData.phone) {
       alert("Please enter your phone number.");
       return;
     }
-    if (!checkoutData.address && checkoutData.method === "Deliver") {
+
+    if (
+      !checkoutData.address &&
+      checkoutData.method === "Deliver"
+    ) {
       alert("Please enter your delivery address.");
       return;
     }
 
     setLoading(true);
+
     try {
+
       const payload = {
         items: groupedItems.map((item) => ({
           name: item.name,
@@ -102,34 +207,51 @@ export default function CheckoutModal({
           price: item.price,
           selectionDetails: item.selectionDetails || {},
         })),
+
         subtotal,
         delivery_fee: deliveryFee,
         total,
+
         method: checkoutData.method,
         payment: checkoutData.payment,
         address: checkoutData.address,
         phone: checkoutData.phone,
+
         latitude: checkoutData.lat,
         longitude: checkoutData.lng,
       };
 
-      const response = await fetch("http://localhost/pastry_system/customer/api_orders.php", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const response = await fetch(
+        "http://localhost/pastry_system/customer/api_orders.php",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
 
       const result = await response.json();
+
       if (result.status === "success") {
+
         setCartItems([]);
+
         onOrderPlaced(result.order_id, checkoutData);
+
         onClose();
+
       } else {
         alert(result.message || "Order failed.");
       }
+
     } catch (err) {
+
       console.error(err);
+
       alert("Server error. Please try again.");
+
     } finally {
       setLoading(false);
     }
@@ -139,17 +261,21 @@ export default function CheckoutModal({
 
   return (
     <AnimatePresence>
+
       <motion.div
         className="fixed inset-0 z-[9999] bg-black/20 flex items-center justify-center p-2 backdrop-blur-sm"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
       >
+
         <motion.div
           className="relative w-full max-w-[800px] h-[550px] bg-white rounded-[30px] flex font-['DM_Sans'] overflow-hidden shadow-2xl"
           initial={{ scale: 0.98 }}
           animate={{ scale: 1 }}
         >
+
+          {/* CLOSE BUTTON */}
           <button
             onClick={onClose}
             className="absolute top-4 right-4 text-gray-400 hover:text-black"
@@ -157,107 +283,185 @@ export default function CheckoutModal({
             <X size={18} />
           </button>
 
-          {/* LEFT: FORM */}
+          {/* LEFT SIDE */}
           <div className="flex-1 p-8 overflow-y-auto">
-            <h2 className="text-lg font-normal text-gray-800 mb-6">Delivery Details</h2>
 
-            {/* Method */}
+            <h2 className="text-lg font-normal text-gray-800 mb-6">
+              Delivery Details
+            </h2>
+
+            {/* METHOD */}
             <div className="mb-6 space-y-2">
-              <p className="text-[10px] text-gray-400 uppercase tracking-widest">Order Method</p>
+
+              <p className="text-[10px] text-gray-400 uppercase tracking-widest">
+                Order Method
+              </p>
+
               <div className="flex gap-2">
+
                 {["Deliver", "Pickup"].map((m) => (
+
                   <button
                     key={m}
-                    onClick={() => setCheckoutData({ ...checkoutData, method: m })}
-                    className={`flex-1 py-2 rounded-xl border text-[11px] ${
-                      checkoutData.method === m ? "bg-black text-white" : "bg-white text-gray-500"
+                    onClick={() =>
+                      setCheckoutData({
+                        ...checkoutData,
+                        method: m,
+                      })
+                    }
+                    className={`flex-1 py-2 rounded-xl border text-[11px]
+                    ${
+                      checkoutData.method === m
+                        ? "bg-black text-white"
+                        : "bg-white text-gray-500"
                     }`}
                   >
                     {m}
                   </button>
+
                 ))}
+
               </div>
+
             </div>
 
-            {/* Address & Phone */}
+            {/* CONTACT INFO */}
             <div className="space-y-3">
-              <p className="text-[10px] text-gray-400 uppercase tracking-widest">Contact Info</p>
+
+              <p className="text-[10px] text-gray-400 uppercase tracking-widest">
+                Contact Info
+              </p>
+
               {checkoutData.method === "Deliver" && (
                 <>
+
+                  {/* ADDRESS */}
                   <input
                     type="text"
                     placeholder="Address"
                     className="w-full p-3 bg-gray-50 rounded-xl text-[11px] outline-none"
                     value={checkoutData.address}
                     onChange={(e) =>
-                      setCheckoutData({ ...checkoutData, address: e.target.value })
+                      setCheckoutData({
+                        ...checkoutData,
+                        address: e.target.value,
+                      })
                     }
                   />
+
+                  {/* MAP */}
                   <div
                     id="checkout-map"
-                    className="w-full h-48 rounded-xl border bg-gray-100 mt-2 overflow-hidden"
+                    className="w-full h-48 rounded-xl border bg-gray-100 mt-2 overflow-hidden z-0"
                   />
+
                 </>
               )}
+
+              {/* PHONE */}
               <input
                 type="text"
                 placeholder="Phone Number"
                 className="w-full p-3 bg-gray-50 rounded-xl text-[11px] outline-none"
                 value={checkoutData.phone}
-                onChange={(e) => setCheckoutData({ ...checkoutData, phone: e.target.value })}
+                onChange={(e) =>
+                  setCheckoutData({
+                    ...checkoutData,
+                    phone: e.target.value,
+                  })
+                }
               />
+
             </div>
+
           </div>
 
-          {/* RIGHT: SUMMARY */}
+          {/* RIGHT SIDE */}
           <div className="w-[300px] bg-gray-50 p-8 border-l flex flex-col">
-            <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-6">Summary</p>
+
+            <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-6">
+              Summary
+            </p>
+
+            {/* ITEMS */}
             <div className="flex-1 overflow-y-auto space-y-4">
+
               {groupedItems.map((item, idx) => {
+
                 const sel =
-                  Array.isArray(item.selectionDetails) || !item.selectionDetails
+                  Array.isArray(item.selectionDetails) ||
+                  !item.selectionDetails
                     ? {}
                     : item.selectionDetails;
+
                 return (
+
                   <div key={idx} className="flex gap-3">
+
                     <img
                       src={`http://localhost/pastry_system/uploads/${item.image}`}
                       className="w-10 h-10 rounded-lg object-cover"
                       alt=""
                     />
+
                     <div className="flex-1">
+
                       <p className="text-[11px] font-normal leading-tight">
                         {item.name} x{item.qty}
                       </p>
-                      {sel.drink && <p className="text-[9px] text-blue-500">{sel.drink}</p>}
-                      {sel.cake && <p className="text-[9px] text-yellow-600">{sel.cake}</p>}
-                      {sel.extras?.length > 0 && (
-                        <p className="text-[9px] text-green-600">
-                          +{sel.extras.map((e) => e.name).join(", ")}
+
+                      {sel.drink && (
+                        <p className="text-[9px] text-blue-500">
+                          {sel.drink}
                         </p>
                       )}
+
+                      {sel.cake && (
+                        <p className="text-[9px] text-yellow-600">
+                          {sel.cake}
+                        </p>
+                      )}
+
+                      {sel.extras?.length > 0 && (
+                        <p className="text-[9px] text-green-600">
+                          +{sel.extras
+                            .map((e) => e.name)
+                            .join(", ")}
+                        </p>
+                      )}
+
                     </div>
-                    <span className="text-[11px]">₱{item.price * item.qty}</span>
+
+                    <span className="text-[11px]">
+                      ₱{item.price * item.qty}
+                    </span>
+
                   </div>
+
                 );
               })}
+
             </div>
 
             {/* TOTALS */}
             <div className="mt-6 pt-6 border-t space-y-2">
+
               <div className="flex justify-between text-[11px] text-gray-500">
                 <span>Subtotal</span>
                 <span>₱{subtotal}</span>
               </div>
+
               <div className="flex justify-between text-[11px] text-gray-500">
                 <span>Delivery</span>
                 <span>₱{deliveryFee}</span>
               </div>
+
               <div className="flex justify-between text-[14px] pt-2">
                 <span>Total</span>
                 <span>₱{total}</span>
               </div>
 
+              {/* PLACE ORDER BUTTON */}
               <button
                 onClick={handlePlaceOrder}
                 disabled={loading}
@@ -265,10 +469,15 @@ export default function CheckoutModal({
               >
                 {loading ? "SAVING..." : "PLACE ORDER"}
               </button>
+
             </div>
+
           </div>
+
         </motion.div>
+
       </motion.div>
+
     </AnimatePresence>
   );
 }

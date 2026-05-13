@@ -1,34 +1,38 @@
 import React, { useEffect, useState } from "react";
 
+const CUSTOMER_BASE = "http://localhost/GitHub/Capstone--Development/customer";
+const STAFF_BASE = "http://localhost/GitHub/Capstone--Development/staff";
+
 export default function Orders() {
   const [orders, setOrders] = useState([]);
+  const [statusUpdateError, setStatusUpdateError] = useState(null);
 
-  useEffect(() => {
-    const loadOrders = async () => {
-      try {
-        const res = await fetch("http://localhost/pastry_system/customer/api_get_orders.php");
-        const data = await res.json();
+  const loadOrders = async () => {
+    try {
+      const res = await fetch(`${CUSTOMER_BASE}/api_get_orders.php`);
+      const data = await res.json();
 
-        if (Array.isArray(data)) {
-          const parsedOrders = data.map(order => ({
-            ...order,
-            items:
-              typeof order.items === "string" && order.items.length
-                ? JSON.parse(order.items)
-                : order.items || [],
-          }));
-          setOrders(parsedOrders);
-          localStorage.setItem("customer_orders", JSON.stringify(parsedOrders));
-        } else {
-          const savedOrders = JSON.parse(localStorage.getItem("customer_orders")) || [];
-          setOrders(savedOrders);
-        }
-      } catch {
+      if (Array.isArray(data)) {
+        const parsedOrders = data.map(order => ({
+          ...order,
+          items:
+            typeof order.items === "string" && order.items.length
+              ? JSON.parse(order.items)
+              : order.items || [],
+        }));
+        setOrders(parsedOrders);
+        localStorage.setItem("customer_orders", JSON.stringify(parsedOrders));
+      } else {
         const savedOrders = JSON.parse(localStorage.getItem("customer_orders")) || [];
         setOrders(savedOrders);
       }
-    };
+    } catch {
+      const savedOrders = JSON.parse(localStorage.getItem("customer_orders")) || [];
+      setOrders(savedOrders);
+    }
+  };
 
+  useEffect(() => {
     loadOrders();
 
     // Listen for live updates after placing an order
