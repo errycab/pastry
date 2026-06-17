@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { BASE } from '../../services/config';
 
 export default function ProductCard({
   product,
@@ -63,7 +64,7 @@ export default function ProductCard({
     return parseFloat(product.price) || 0;
   };
 
- const isDirectAdd = true;
+// removed unused flag
 
   return (
     <div className="group bg-[#f9f9f9] rounded-[35px] p-5 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 flex flex-col items-center text-center border border-transparent hover:border-gray-100">
@@ -72,7 +73,7 @@ export default function ProductCard({
         <img
           src={
             product.image
-              ? `http://localhost/pastry_system/uploads/${product.image}`
+              ? `${BASE}/uploads/${product.image}`
               : 'https://via.placeholder.com/150'
           }
           alt={product.name}

@@ -2,20 +2,61 @@
 session_start();
 require '../includes/data.php';
 
-$db = &getDB();
-
 if (!isset($_SESSION['user'])) {
     header("Location: ../login.php");
     exit;
 }
 
 $user = $_SESSION['user'];
-$userEmail = $user['email'] ?? '';
+$userEmail = trim($user['email'] ?? '');
+$userName = trim($user['name'] ?? '');
 
 /* CUSTOMER ORDERS ONLY */
-$orders = array_filter($db['orders'], function($o) use ($userEmail){
-    return $o['email'] === $userEmail;
-});
+$orders = [];
+
+if ($userEmail !== '' || $userName !== '') {
+    $ordersRaw = db_all('SELECT * FROM orders ORDER BY id DESC');
+    $itemsRaw = db_all('SELECT * FROM order_items');
+
+    $itemsByOrder = [];
+    foreach ($itemsRaw as $item) {
+        $itemsByOrder[$item['order_id']][] = [
+            'product' => $item['product'],
+            'qty' => (int)$item['qty'],
+            'price' => (float)$item['price']
+        ];
+    }
+
+    foreach ($ordersRaw as $order) {
+        $orderEmail = strtolower(trim($order['email'] ?? ''));
+        $orderCustomer = strtolower(trim($order['customer'] ?? ''));
+
+        $matchEmail =
+            $orderEmail !== '' &&
+            $userEmail !== '' &&
+            $orderEmail === strtolower($userEmail);
+
+        $matchName =
+            $orderCustomer !== '' &&
+            $userName !== '' &&
+            $orderCustomer === strtolower($userName);
+
+        if ($matchEmail || $matchName) {
+            $orders[] = [
+                'id' => (int)$order['id'],
+                'customer' => $order['customer'] ?? '',
+                'email' => $order['email'] ?? '',
+                'type' => $order['type'] ?? '',
+                'status' => $order['status'] ?? '',
+                'total' => (float)($order['total'] ?? 0),
+                'items' => $itemsByOrder[$order['id']] ?? [],
+                'date' => $order['order_date'] ?? $order['created_at'] ?? '',
+                'payment' => $order['payment'] ?? '',
+                'address' => $order['address'] ?? ''
+            ];
+        }
+    }
+}
 
 /* FILTER */
 $filter = $_GET['filter'] ?? 'all';
@@ -401,7 +442,7 @@ $statusClass = strtolower($o['status']);
 <script>
 // CART COUNT
 function loadCartCount(){
-  fetch('../cart_api.php?action=count')
+  fetch('cart_api.php?action=count')
     .then(res=>res.json())
     .then(data=>{
       document.getElementById('cartCountBadge').innerText = data.count || 0;
@@ -411,7 +452,7 @@ loadCartCount();
 
 // NOTIF COUNT
 function loadNotifCount(){
-  fetch('../notifications_api.php?action=count')
+  fetch('notifications_api.php?action=count')
     .then(res=>res.json())
     .then(data=>{
       document.getElementById('notifBadge').innerText = data.count || 0;

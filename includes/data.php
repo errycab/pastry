@@ -4,6 +4,19 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// Ensure compatibility helpers exist (db(), db_all(), db_run(), etc.).
+$compat = __DIR__ . '/../laravel/legacy_compat.php';
+if (file_exists($compat)) {
+    require_once $compat;
+}
+
+if (!function_exists('db_all')) {
+    trigger_error(
+        'Legacy DB compatibility helpers not found. Please verify laravel/legacy_compat.php is accessible.',
+        E_USER_ERROR
+    );
+}
+
 require_once __DIR__ . '/db.php';
 
 /* =========================
@@ -80,35 +93,35 @@ function _load_db(): array {
         $orders[] = [
 
             'id' =>
-                (int)$o['id'],
+                (int)($o['id'] ?? 0),
 
             'customer' =>
-                $o['customer'],
+                $o['customer'] ?? $o['phone'] ?? '',
 
             'email' =>
-                $o['email'],
+                $o['email'] ?? '',
 
             'type' =>
-                $o['type'],
+                $o['type'] ?? '',
 
             'status' =>
-                $o['status'],
+                $o['status'] ?? '',
 
             'total' =>
-                (float)$o['total'],
+                (float)($o['total'] ?? 0),
 
             'items' =>
                 $itemsByOrder[$o['id']]
                 ?? [],
 
             'date' =>
-                $o['order_date'],
+                $o['order_date'] ?? $o['created_at'] ?? '',
 
             'payment' =>
-                $o['payment'],
+                $o['payment'] ?? '',
 
             'address' =>
-                $o['address']
+                $o['address'] ?? '',
         ];
     }
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ProductCard from '../components/ProductCard';
 import ProductModal from '../components/ProductModal';
+import { CUSTOMER_BASE } from '../../services/config';
 
 export default function Menu({ onAddToCart }) {
   const [products, setProducts] = useState([]);
@@ -12,15 +13,28 @@ export default function Menu({ onAddToCart }) {
   const [selectedProduct, setSelectedProduct] =
     useState(null);
 
- useEffect(() => {
-  fetch('http://localhost/pastry_system/customer/api_products.php?action=list')
-    .then(res => res.json())
-    .then(data => {
+useEffect(() => {
+  const url = `${CUSTOMER_BASE}/api_products.php?action=list`;
+  console.log('Menu: fetching products from', url);
+
+  fetch(url)
+    .then((res) => {
+      if (!res.ok) throw new Error(`Network response was not ok (${res.status})`);
+      return res.json();
+    })
+    .then((data) => {
       if (Array.isArray(data)) {
         // Filter out items with name "Cake Customization"
-        const filtered = data.filter(p => p.name.toLowerCase() !== 'cake customization');
+        const filtered = data.filter((p) => p.name.toLowerCase() !== 'cake customization');
         setProducts(filtered);
+      } else {
+        console.error('Menu: products API returned unexpected payload:', data);
+        setProducts([]);
       }
+    })
+    .catch((err) => {
+      console.error('Menu: failed to fetch products:', err);
+      setProducts([]);
     });
 }, []);
 

@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/cors.php';
 session_start();
 
 require '../includes/data.php';
@@ -153,7 +154,8 @@ if (
         $items[] = [
 
             'product' =>
-                $item['name']
+                $item['product']['name']
+                ?? $item['name']
                 ?? 'Product',
 
             'qty' =>
@@ -211,6 +213,30 @@ if (
 
     $_SESSION['success'] =
         'Order placed successfully';
+
+    $userId =
+        (int)($user['id'] ?? 0);
+
+    if ($userId > 0) {
+
+        db_add_notification([
+
+            'user_id' =>
+                $userId,
+
+            'type' =>
+                'Success',
+
+            'title' =>
+                'Order Placed',
+
+            'message' =>
+                "Your order #{$orderId} has been placed successfully. We will update you once it is ready.",
+
+            'action_url' =>
+                'orders.php'
+        ]);
+    }
 
     /* =========================
        SUCCESS REDIRECT
