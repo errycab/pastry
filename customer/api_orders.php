@@ -72,7 +72,7 @@ try {
     }
 
     // Build insert fields dynamically so this API still works if the orders table lacks customer/email/user_id columns.
-    $fields = ['items', 'subtotal', 'delivery_fee', 'total', 'method', 'payment', 'address', 'phone', 'latitude', 'longitude'];
+    $fields = ['items', 'subtotal', 'delivery_fee', 'total', 'method', 'payment', 'address', 'phone', 'lat', 'lng'];
     $values = ["'$items'", "'$subtotal'", "'$delivery'", "'$total'", "'$method'", "'$payment'", "'$address'", "'$phone'", "'$latitude'", "'$longitude'"];
 
     if ($hasCustomer && $customer !== '') {
@@ -113,6 +113,12 @@ try {
     }
 
 } catch (Exception $e) {
+    // Log error to file for debugging
+    @file_put_contents(__DIR__ . '/api_orders_errors.log', 
+        date('c') . " - " . $e->getMessage() . "\n", 
+        FILE_APPEND
+    );
+    http_response_code(400);
     echo json_encode([
         "status" => "error",
         "message" => $e->getMessage()

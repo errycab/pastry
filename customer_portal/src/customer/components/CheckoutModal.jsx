@@ -306,6 +306,7 @@ export default function CheckoutModal({
             body: JSON.stringify({
               order_id: result.order_id,
               amount: total,
+              payment_method: checkoutData.payment,
             }),
           }
         );
