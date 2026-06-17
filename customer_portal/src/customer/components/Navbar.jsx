@@ -50,14 +50,22 @@ export default function Navbar({ cartCount = 0, onCartClick }) {
      FETCH ORDERS (NOTIFS)
   ========================= */
   useEffect(() => {
-    fetch(`${CUSTOMER_BASE}/api_get_orders.php`)
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          setNotifications(data.map(o => ({ ...o, read: o.notif_viewed === 1 || o.notif_viewed === '1' })));
-        }
-      })
-      .catch(() => setNotifications([]));
+    // Get user_id from localStorage
+    try {
+      const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+      if (storedUser?.id) {
+        fetch(`${CUSTOMER_BASE}/api_get_orders.php?user_id=${storedUser.id}`)
+          .then(res => res.json())
+          .then(data => {
+            if (Array.isArray(data)) {
+              setNotifications(data.map(o => ({ ...o, read: o.notif_viewed === 1 || o.notif_viewed === '1' })));
+            }
+          })
+          .catch(() => setNotifications([]));
+      }
+    } catch {
+      setNotifications([]);
+    }
   }, []);
 
   /* =========================

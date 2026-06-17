@@ -33,8 +33,21 @@ try {
         $hasOrderItems = true;
     }
 
-    // Fetch all orders
-    $sql = "SELECT * FROM orders ORDER BY created_at DESC";
+    // Get user_id from query parameter or POST data (for filtering customer's own orders)
+    $user_id = null;
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $data = json_decode(file_get_contents("php://input"), true);
+        $user_id = intval($data['user_id'] ?? $_GET['user_id'] ?? 0);
+    } elseif (!empty($_GET['user_id'])) {
+        $user_id = intval($_GET['user_id']);
+    }
+
+    // Fetch orders: filter by user_id if provided (for customers), otherwise return all (for admin panel)
+    if ($user_id > 0) {
+        $sql = "SELECT * FROM orders WHERE user_id = $user_id ORDER BY created_at DESC";
+    } else {
+        $sql = "SELECT * FROM orders ORDER BY created_at DESC";
+    }
     $res = mysqli_query($conn, $sql);
 
     if (!$res) {
@@ -67,6 +80,7 @@ try {
 
         $orders[] = [
             "id" => intval($row['id']),
+            "user_id" => intval($row['user_id'] ?? 0),
             "customer" => $hasCustomer ? ($row['customer'] ?? '') : '',
             "email" => $hasEmail ? ($row['email'] ?? '') : '',
             "items" => $items,

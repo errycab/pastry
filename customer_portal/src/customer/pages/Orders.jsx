@@ -127,13 +127,14 @@ export default function Orders() {
   }, [userEmail, userName]);
 
   const loadOrders = useCallback(async () => {
-    if (!userEmail) {
+    if (!userEmail || !user?.id) {
       setOrders([]);
       return;
     }
 
     try {
-      const res = await fetch(`${CUSTOMER_BASE}/api_get_orders.php`);
+      // Send user_id as query parameter for secure filtering
+      const res = await fetch(`${CUSTOMER_BASE}/api_get_orders.php?user_id=${user.id}`);
       const data = await res.json();
       if (Array.isArray(data)) {
         const parsedOrders = data.map((order) => ({
@@ -154,7 +155,7 @@ export default function Orders() {
       const savedOrders = JSON.parse(localStorage.getItem(storageKey)) || [];
       setOrders(filterUserOrders(savedOrders));
     }
-  }, [userEmail, storageKey]);
+  }, [userEmail, user?.id, storageKey]);
 
   useEffect(() => {
     loadOrders();

@@ -230,6 +230,7 @@ export default function CheckoutModal({
         delivery_fee: deliveryFee,
         total,
 
+        user_id: savedUser.id || 0, // Include user_id for proper order association
         customer: savedUser.name || "",
         email: savedUser.email || "",
 

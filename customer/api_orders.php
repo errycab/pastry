@@ -41,6 +41,7 @@ try {
     $longitude = floatval($data['longitude'] ?? 0);
     $customer  = mysqli_real_escape_string($conn, $data['customer'] ?? '');
     $email     = mysqli_real_escape_string($conn, $data['email'] ?? '');
+    $user_id   = intval($data['user_id'] ?? 0); // Capture user_id from frontend
 
     $hasCustomer = false;
     $hasEmail = false;
@@ -70,7 +71,7 @@ try {
         $hasEmail = true;
     }
 
-    // Build insert fields dynamically so this API still works if the orders table lacks customer/email columns.
+    // Build insert fields dynamically so this API still works if the orders table lacks customer/email/user_id columns.
     $fields = ['items', 'subtotal', 'delivery_fee', 'total', 'method', 'payment', 'address', 'phone', 'latitude', 'longitude'];
     $values = ["'$items'", "'$subtotal'", "'$delivery'", "'$total'", "'$method'", "'$payment'", "'$address'", "'$phone'", "'$latitude'", "'$longitude'"];
 
@@ -82,6 +83,18 @@ try {
     if ($hasEmail && $email !== '') {
         $fields[] = 'email';
         $values[] = "'$email'";
+    }
+
+    // Check if user_id column exists and add if provided
+    $hasUserId = false;
+    $userIdCheckRes = mysqli_query($conn, "SHOW COLUMNS FROM orders LIKE 'user_id'");
+    if ($userIdCheckRes && mysqli_num_rows($userIdCheckRes) > 0) {
+        $hasUserId = true;
+    }
+    
+    if ($hasUserId && $user_id > 0) {
+        $fields[] = 'user_id';
+        $values[] = $user_id;
     }
 
     $sql = sprintf(
