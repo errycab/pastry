@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, X, Send, Bot, User, Headphones } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import ProductCard from "../components/ProductCard";
 import ProductModal from "../components/ProductModal";
@@ -9,7 +10,7 @@ import { CUSTOMER_BASE } from "../../services/config";
 
 function Banner({ onOrderClick }) {
   return (
-    <div className="relative w-full h-[500px] bg-[#1a1a1a] flex items-center justify-center overflow-hidden font-['DM_Sans']">
+    <div className="relative w-full h-screen min-h-[720px] bg-[#1a1a1a] flex items-center justify-center overflow-hidden font-['DM_Sans']">
       <div
         className="absolute inset-0 opacity-40 bg-cover bg-center"
         style={{
@@ -350,7 +351,8 @@ function ChatBubble() {
 /* =========================
    MAIN DASHBOARD
 ========================= */
-export default function Dashboard({ onAddToCart, navigate }) {
+export default function Dashboard({ onAddToCart }) {
+  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct]       = useState(null);
@@ -384,9 +386,37 @@ export default function Dashboard({ onAddToCart, navigate }) {
     products.filter(p => !p.name?.toLowerCase().includes("customization")).slice(0, 6),
   [products]);
 
-  const mustTry = useMemo(() =>
-    products.filter(p => !p.name?.toLowerCase().includes("customization")).slice(6, 12),
-  [products]);
+  const mustTry = useMemo(() => {
+    const targets = [
+      "ube flan cake",
+      "sansrival",
+      "tuna pasta",
+      "cheesy bacon fries",
+      "mojos hot",
+      "breakfast pizza"
+    ];
+
+    const available = products
+      .filter(p => p.name)
+      .map(p => ({ ...p, lowerName: p.name.toLowerCase() }));
+
+    const selected = [];
+    targets.forEach(target => {
+      const match = available.find(p => p.lowerName.includes(target));
+      if (match && !selected.some(item => item.id === match.id)) {
+        selected.push(match);
+      }
+    });
+
+    available.forEach(p => {
+      if (selected.length >= 6) return;
+      if (!p.lowerName.includes("customization") && !selected.some(item => item.id === p.id)) {
+        selected.push(p);
+      }
+    });
+
+    return selected;
+  }, [products]);
 
   return (
     <div className="bg-white min-h-screen font-['DM_Sans'] relative">

@@ -1,12 +1,35 @@
-import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, X, Send, Bot, User, Headphones, Inbox } from 'lucide-react';
+import { STAFF_BASE, CUSTOMER_BASE } from '../../services/config';
 
 import StaffNavbar from '../components/StaffNavbar';
-import { BASE, CUSTOMER_BASE as CUSTOMER_BASE_CONFIG } from '../../services/config';
 
-const STAFF_BASE = `${BASE}/staff`;
-const CUSTOMER_BASE = CUSTOMER_BASE_CONFIG;
+/* =========================
+   BANNER
+========================= */
+function Banner() {
+  return (
+    <div className="relative w-full h-[500px] bg-[#1a1a1a] flex items-center justify-center overflow-hidden font-['DM_Sans']">
+      <div className="absolute inset-0 opacity-40 bg-cover bg-center"
+        style={{ backgroundImage: "url('https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=2000')" }} />
+      <div className="relative z-10 text-center px-6 max-w-4xl">
+        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          className="text-[#d4af37] text-[10px] font-black tracking-[0.4em] uppercase mb-4">
+          Pastry Project Staff Panel
+        </motion.p>
+        <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+          className="text-white text-6xl md:text-7xl font-serif mb-8 leading-tight font-bold">
+          Staff <br /><span className="italic text-[#d4af37]">Dashboard</span>
+        </motion.h1>
+        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
+          className="text-gray-300 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+          Manage orders, monitor products, and assist customer transactions in real-time.
+        </motion.p>
+      </div>
+    </div>
+  );
+}
 
 /* =========================
    STATS CARD
@@ -128,15 +151,30 @@ function StaffChatInbox({ open, onClose }) {
 
   const totalUnread = conversations.reduce((sum, c) => sum + Number(c.unread_count || 0), 0);
 
-  const fetchInbox = useCallback(async () => {
+  useEffect(() => {
+    if (!open) return;
+    fetchInbox();
+    pollRef.current = setInterval(fetchInbox, 5000);
+    return () => clearInterval(pollRef.current);
+  }, [open]);
+
+  useEffect(() => {
+    if (activeOrderId) fetchMessages(activeOrderId);
+  }, [activeOrderId]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const fetchInbox = async () => {
     try {
       const res  = await fetch(`${STAFF_BASE}/api_chat_fetch_all.php`);
       const data = await res.json();
       if (data.success) setConversations(data.conversations);
     } catch (e) { console.error(e); }
-  }, [STAFF_BASE]);
+  };
 
-  const fetchMessages = useCallback(async (orderId) => {
+  const fetchMessages = async (orderId) => {
     try {
       const res  = await fetch(`${CUSTOMER_BASE}/api_chat_fetch.php?order_id=${orderId}`);
       const data = await res.json();
@@ -146,22 +184,7 @@ function StaffChatInbox({ open, onClose }) {
         fetchInbox();
       }
     } catch (e) { console.error(e); }
-  }, [CUSTOMER_BASE, fetchInbox]);
-
-  useEffect(() => {
-    if (!open) return;
-    fetchInbox();
-    pollRef.current = setInterval(fetchInbox, 5000);
-    return () => clearInterval(pollRef.current);
-  }, [open, fetchInbox]);
-
-  useEffect(() => {
-    if (activeOrderId) fetchMessages(activeOrderId);
-  }, [activeOrderId, fetchMessages]);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  };
 
   const sendMessage = async () => {
     const msg = input.trim();
@@ -210,27 +233,16 @@ function StaffChatInbox({ open, onClose }) {
   return (
     <AnimatePresence>
       {open && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            onClick={onClose}
-            className="fixed inset-x-0 bottom-0 bg-black/40 z-[9999]"
-            style={{ top: "60px" }}
-          />
-          <motion.div
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ type: "spring", damping: 28, stiffness: 280 }}
-            className="fixed right-0 bottom-0 z-[10000] flex shadow-2xl"
-            style={{ width: "min(560px, 96vw)", top: "80px", height: "calc(100% - 80px)" }}
-          >
+        <motion.div
+          initial={{ x: "100%" }}
+          animate={{ x: 0 }}
+          exit={{ x: "100%" }}
+          transition={{ type: "spring", damping: 28, stiffness: 280 }}
+          className="fixed right-0 top-0 h-full z-[10000] flex shadow-2xl"
+          style={{ width: "780px" }}
+        >
           {/* ── LEFT: INBOX LIST ── */}
-          <div className="w-[220px] bg-white border-r border-gray-100 flex flex-col h-full flex-shrink-0">
+          <div className="w-[280px] bg-white border-r border-gray-100 flex flex-col h-full flex-shrink-0">
 
             {/* Header */}
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
@@ -379,8 +391,7 @@ function StaffChatInbox({ open, onClose }) {
               </div>
             )}
           </div>
-          </motion.div>
-        </>
+        </motion.div>
       )}
     </AnimatePresence>
   );
@@ -420,33 +431,17 @@ export default function DashboardStaff() {
       .finally(() => setProductsLoading(false));
   };
 
-  const normalizeOrders = (items = [], source) =>
-    (Array.isArray(items) ? items : []).map(order => ({
-      ...order,
-      source,
-      items: typeof order.items === "string" && order.items.length
-        ? JSON.parse(order.items)
-        : Array.isArray(order.items)
-        ? order.items
-        : [],
-    }));
-
   const fetchOrders = () => {
-    setOrdersLoading(true);
-    Promise.all([
-      fetch(`${CUSTOMER_BASE}/api_orders.php?action=list`).then(res => res.json()).catch(() => []),
-      fetch(`${STAFF_BASE}/api_orders.php`).then(res => res.json()).catch(() => []),
-    ])
-      .then(([customerOrders, staffOrders]) => {
-        const combined = [
-          ...normalizeOrders(customerOrders, "Customer"),
-          ...normalizeOrders(staffOrders, "Staff"),
-        ].sort((a, b) => {
-          const dateA = a.created_at ? new Date(a.created_at).getTime() : Number(a.id);
-          const dateB = b.created_at ? new Date(b.created_at).getTime() : Number(b.id);
-          return dateB - dateA;
-        });
-        setOrders(combined);
+    fetch(`${STAFF_BASE}/api_orders.php`)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          const parsed = data.map(order => ({
+            ...order,
+            items: typeof order.items === "string" ? JSON.parse(order.items) : order.items || [],
+          }));
+          setOrders(parsed);
+        } else setOrders([]);
       })
       .catch(() => setOrders([]))
       .finally(() => setOrdersLoading(false));
@@ -480,12 +475,7 @@ export default function DashboardStaff() {
       .catch(err => console.error("Update error:", err));
   };
 
-  useEffect(() => {
-    fetchProducts();
-    fetchOrders();
-    const interval = setInterval(fetchOrders, 10000);
-    return () => clearInterval(interval);
-  }, []);
+  useEffect(() => { fetchProducts(); fetchOrders(); }, []);
 
   const todayOrders     = useMemo(() => orders.filter(o => isToday(o.created_at)), [orders]);
   const pendingOrders   = useMemo(() => orders.filter(o => o.status === 'Pending'), [orders]);
@@ -544,19 +534,9 @@ export default function DashboardStaff() {
     <div className="bg-[#fafafa] min-h-screen font-['DM_Sans']">
 
       <StaffNavbar />
+      <Banner />
 
-      <div className="max-w-7xl mx-auto px-10 pt-28 pb-14">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between mb-10">
-          <div>
-            <p className="text-[10px] uppercase tracking-[0.35em] text-[#d4af37] font-black mb-3">
-              Staff Dashboard
-            </p>
-            <h1 className="text-5xl font-black">Dashboard</h1>
-            <p className="mt-3 text-sm text-gray-500 max-w-2xl">
-              Monitor orders, sales, and customer activity across the pastry business.
-            </p>
-          </div>
-        </div>
+      <div className="max-w-7xl mx-auto px-10 py-14">
 
         {/* STATS */}
         <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-6 mb-12">
@@ -722,7 +702,7 @@ export default function DashboardStaff() {
       {/* ── CHAT INBOX BUTTON ── */}
       <button
         onClick={() => setChatOpen(o => !o)}
-        className="fixed bottom-6 right-6 bg-black text-white w-14 h-14 rounded-full flex items-center justify-center shadow-xl z-[9998] hover:bg-[#d4af37] transition-colors"
+        className="fixed bottom-6 right-6 bg-black text-white w-14 h-14 rounded-full flex items-center justify-center shadow-xl z-[9999] hover:bg-[#d4af37] transition-colors"
       >
         <MessageCircle size={22} />
         {inboxUnread > 0 && !chatOpen && (

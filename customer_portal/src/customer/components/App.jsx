@@ -9,14 +9,10 @@ import {
 /* CUSTOMER */
 import CustomerApp from "./customer/components/CustomerApp";
 import Login from "./customer/pages/Login";           // ← your Login.jsx
-import Register from "./customer/pages/Register";
 import ForgotPassword from "./customer/pages/ForgotPassword"; // ← your ForgotPassword.jsx
 
 /* STAFF */
 import StaffApp from "./staff/components/StaffApp";
-
-/* ADMIN */
-import AdminApp from "./admin/components/AdminApp";
 
 function App() {
   const homepage = process.env.PUBLIC_URL || "/Capstone--Development/customer";
@@ -26,7 +22,6 @@ function App() {
 
   return (
     <Router basename={basename}>
-      <Routes>
 
         {/* ROOT → redirect to login */}
         <Route
@@ -36,7 +31,6 @@ function App() {
 
         {/* ── AUTH (no navbar) ── */}
         <Route path="customer/login"          element={<Login />} />
-        <Route path="customer/register"       element={<Register />} />
         <Route path="customer/forgot-password" element={<ForgotPassword onBack={() => window.location.href = "/pastry_system/customer/login"} />} />
 
         {/* ================= CUSTOMER ================= */}
@@ -44,9 +38,6 @@ function App() {
 
         {/* ================= STAFF ================= */}
         <Route path="staff/*" element={<StaffApp />} />
-
-        {/* ================= ADMIN ================= */}
-        <Route path="admin/*" element={<AdminApp />} />
 
         {/* FALLBACK */}
         <Route path="*" element={<div style={{ padding: 20 }}>404 Not Found</div>} />

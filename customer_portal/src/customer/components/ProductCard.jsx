@@ -47,6 +47,12 @@ export default function ProductCard({
       }
     }
 
+    if (category === 'STARTER') {
+      return currentOption === 'SOLO'
+        ? parseFloat(product.solo_price) || 0
+        : parseFloat(product.sharing_price) || 0;
+    }
+
     if (category === 'PASTA') {
       return currentOption === 'REGULAR'
         ? 140

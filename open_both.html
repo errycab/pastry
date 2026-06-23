@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Open Both Apps</title>
+    <style>body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:2rem}button{font-size:1rem;padding:.5rem 1rem}</style>
+  </head>
+  <body>
+    <h1>Open Laravel & Customer Portal</h1>
+    <p>Click the button below to open both apps in new tabs (if your browser blocks popups, use the links).</p>
+    <button id="open">Open Both</button>
+    <ul>
+      <li><a href="http://127.0.0.1:8001" target="_blank">Open Laravel (127.0.0.1:8001)</a></li>
+      <li><a href="http://127.0.0.1:3000/customer" target="_blank">Open Customer Portal (127.0.0.1:3000/customer)</a></li>
+    </ul>
+    <script>
+      document.getElementById('open').addEventListener('click', function(){
+        window.open('http://127.0.0.1:8001','_blank');
+        window.open('http://127.0.0.1:3000/customer','_blank');
+      });
+    </script>
+  </body>
+</html>
