@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Cart</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+<style>
+/* SAME CSS — unchanged */
+body{margin:0;font-family:'DM Sans',sans-serif;background:#f4f4f4;color:#000;}
+.top-nav{display:flex;justify-content:space-between;align-items:center;padding:18px 30px;background:#fff;border-bottom:1px solid #eee;}
+.left-nav{display:flex;align-items:center;gap:30px}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:40px;height:40px;border-radius:10px}
+.brand-name{font-family:'Playfair Display';font-size:22px;font-weight:700}
+.brand-name span{color:#e7c46a}
+.nav-links{display:flex;gap:20px}
+.nav-links a{text-decoration:none;font-size:11px;font-weight:700;letter-spacing:1px;color:#000;}
+.nav-links a.active{border-bottom:2px solid #e7c46a}
+.nav-right{display:flex;align-items:center;gap:10px}
+.cart-btn{position:relative;background:#111;color:#fff;padding:10px 14px;border-radius:10px;text-decoration:none}
+.cart-badge{position:absolute;top:-6px;right:-6px;background:red;color:#fff;font-size:10px;padding:3px 6px;border-radius:50%}
+.account-btn{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  background:#fff;
+  color:#111;
+  padding:10px 12px;
+  border-radius:10px;
+  text-decoration:none;
+  border:1px solid #ddd;
+  font-size:13px;
+  font-weight:500;
+}
+.main{padding:25px}
+.card{background:#fff;border-radius:14px;padding:20px;border:1px solid #eee;}
+.btn{padding:8px 12px;border:none;border-radius:8px;cursor:pointer}
+.btn-primary{background:#111;color:#fff}
+.btn-ghost{background:#eee}
+.btn-sm{font-size:12px;padding:6px 10px}
+
+.item-row{display:flex;gap:15px;margin-top:10px;align-items:center}
+.item-img{width:60px;height:60px;border-radius:10px;object-fit:cover;border:1px solid #ddd}
+.size-badge{background:#ffecef;color:#000;padding:4px 10px;border-radius:20px;font-size:12px;display:inline-block;margin-bottom:5px}
+.row-total{font-weight:700;color:#000}
+
+.summary-item{display:flex;gap:10px;margin-bottom:10px;align-items:center}
+.summary-img{width:40px;height:40px;border-radius:8px;object-fit:cover;border:1px solid #ddd}
+</style>
+</head>
+
+<body>
+
+<!-- NAV SAME -->
+<div class="top-nav">
+  <div class="left-nav">
+    <div class="brand">
+      <img src="logo.jpg" class="logo">
+      <div class="brand-name">Pastry <span>Project</span></div>
+    </div>
+
+    <div class="nav-links">
+      <a href="dashboard.php">DASHBOARD</a>
+      <a href="products.php">PRODUCTS</a>
+      <a href="orders.php">ORDERS</a>
+      <a href="notifications.php">NOTIFICATIONS</a>
+    </div>
+  </div>
+
+  <div class="nav-right">
+    
+    <a href="cart.php" class="cart-btn">
+      🛒
+      <span class="cart-badge">0</span>
+    </a>
+
+    <!-- ACCOUNT -->
+<a href="account.php" class="account-btn">
+  👤 Customer</a>
+
+  </div>
+</div>
+
+<div class="main">
+
+
+<div class="card" style="text-align:center;padding:60px">
+  <h3>Your cart is empty</h3>
+  <a href="index.php" class="btn btn-primary">Browse Products</a>
+</div>
+
+
+</div>
+
+<script>
+
+/* ✅ FULL ORIGINAL JS BACK */
+document.getElementById('selectAllBtn')?.addEventListener('click',()=>{
+  const checkboxes = document.querySelectorAll('.select-item');
+  const allChecked = [...checkboxes].every(cb => cb.checked);
+  checkboxes.forEach(cb => cb.checked = !allChecked);
+  updateTotals();
+});
+
+function updateTotals() {
+  let subtotal = 0;
+  let selectedCount = 0;
+
+  const container = document.getElementById('selectedInputs');
+  const summaryList = document.getElementById('summaryList');
+
+  container.innerHTML = '';
+  summaryList.innerHTML = '';
+
+  document.querySelectorAll('.qty-input').forEach(input => {
+    const key = input.dataset.key;
+    const checkbox = document.querySelector(`.select-item[data-key="${key}"]`);
+
+    if (!checkbox || !checkbox.checked) return;
+
+    const qty = parseInt(input.value) || 0;
+    const price = parseFloat(input.dataset.price);
+    const rowTotal = price * qty;
+
+    document.querySelector(`.row-total[data-key="${key}"]`)
+      .textContent = '₱' + rowTotal.toLocaleString();
+
+    subtotal += rowTotal;
+    selectedCount++;
+
+    const img = input.closest('.item-row').querySelector('img');
+    const name = input.closest('.item-row')
+                     .parentElement
+                     .querySelector('strong')
+                     .innerText;
+
+    const div = document.createElement('div');
+    div.className = 'summary-item';
+    div.innerHTML = `
+      ${img ? `<img src="${img.src}" class="summary-img">` : '🍰'}
+      <div style="flex:1">${name}</div>
+      <div>₱${rowTotal.toLocaleString()}</div>
+    `;
+    summaryList.appendChild(div);
+
+    const hidden = document.createElement('input');
+    hidden.type = 'hidden';
+    hidden.name = 'selected_items[]';
+    hidden.value = key;
+    container.appendChild(hidden);
+  });
+
+  document.getElementById('subtotalValue').textContent =
+    '₱' + subtotal.toLocaleString();
+
+  document.getElementById('grandTotal').textContent =
+    '₱' + (subtotal + 50).toLocaleString();
+
+  document.getElementById('summaryCard').style.display =
+    selectedCount > 0 ? 'block' : 'none';
+
+  const btn = document.getElementById('checkoutBtn');
+  btn.style.pointerEvents = selectedCount > 0 ? 'auto' : 'none';
+  btn.style.opacity = selectedCount > 0 ? '1' : '0.5';
+}
+
+document.querySelectorAll('.qty-input').forEach(i => {
+  i.addEventListener('input', updateTotals);
+});
+
+document.querySelectorAll('.select-item').forEach(cb => {
+  cb.addEventListener('change', updateTotals);
+});
+
+updateTotals();
+
+</script>
+
+</body>
+</html>

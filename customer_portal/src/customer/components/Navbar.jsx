@@ -3,15 +3,11 @@ import {
   ShoppingCart,
   Bell,
   Search,
-  User,
-  X,
-  LogOut,
-  Package,
-  Menu as MenuIcon,
-  Trash2
+  User
 } from "lucide-react";
 
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { BASE, CUSTOMER_BASE } from '../../services/config';
 
 export default function Navbar({ cartCount = 0, onCartClick }) {
 
@@ -20,43 +16,56 @@ export default function Navbar({ cartCount = 0, onCartClick }) {
 
   const [notifications, setNotifications] = useState([]);
   const [openNotif, setOpenNotif] = useState(false);
-  const [trashMode, setTrashMode] = useState(false);
-  const [selectedNotifs, setSelectedNotifs] = useState([]);
-
   const [openSearch, setOpenSearch] = useState(false);
-  const [search, setSearch] = useState("");
-  const [products, setProducts] = useState([]);
 
   const [openAccount, setOpenAccount] = useState(false);
+  const [user, setUser] = useState(null);
 
   const searchRef = useRef(null);
   const notifRef = useRef(null);
   const accountRef = useRef(null);
 
-  const BASE = "http://localhost/pastry_system";
+  // use imported BASE and CUSTOMER_BASE from config
+
+  /* =========================
+     FETCH USER INFO
+  ========================= */
+  useEffect(() => {
+    fetch(`${CUSTOMER_BASE}/api_get_user.php`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          setUser(data.user);
+        }
+      })
+      .catch(() => setUser(null));
+  }, []);
 
   /* =========================
      FETCH PRODUCTS
   ========================= */
-  useEffect(() => {
-    fetch(`${BASE}/customer/api_products.php`)
-      .then(res => res.json())
-      .then(data => setProducts(Array.isArray(data) ? data : []))
-      .catch(() => setProducts([]));
-  }, []);
+  // product list fetch intentionally omitted; not used in navbar currently
 
   /* =========================
      FETCH ORDERS (NOTIFS)
   ========================= */
   useEffect(() => {
-    fetch(`${BASE}/customer/api_get_orders.php`)
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          setNotifications(data.map(o => ({ ...o, read: false })));
-        }
-      })
-      .catch(() => setNotifications([]));
+    // Get user_id from localStorage
+    try {
+      const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+      if (storedUser?.id) {
+        fetch(`${CUSTOMER_BASE}/api_get_orders.php?user_id=${storedUser.id}`)
+          .then(res => res.json())
+          .then(data => {
+            if (Array.isArray(data)) {
+              setNotifications(data.map(o => ({ ...o, read: o.notif_viewed === 1 || o.notif_viewed === '1' })));
+            }
+          })
+          .catch(() => setNotifications([]));
+      }
+    } catch {
+      setNotifications([]);
+    }
   }, []);
 
   /* =========================
@@ -67,7 +76,6 @@ export default function Navbar({ cartCount = 0, onCartClick }) {
       if (searchRef.current && !searchRef.current.contains(e.target)) setOpenSearch(false);
       if (notifRef.current && !notifRef.current.contains(e.target)) {
         setOpenNotif(false);
-        setTrashMode(false);
       }
       if (accountRef.current && !accountRef.current.contains(e.target)) setOpenAccount(false);
     };
@@ -91,6 +99,19 @@ export default function Navbar({ cartCount = 0, onCartClick }) {
     setOpenNotif(!openNotif);
 
     if (!openNotif) {
+      // Mark all notifications as read in backend
+      notifications.forEach(notif => {
+        if (!notif.read) {
+          const formData = new FormData();
+          formData.append('order_id', notif.id);
+          fetch(`${CUSTOMER_BASE}/api_mark_notif_read.php`, {
+            method: 'POST',
+            body: formData
+          }).catch(err => console.error('Error marking notification as read:', err));
+        }
+      });
+
+      // Update local state
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
     }
   };
@@ -99,12 +120,13 @@ export default function Navbar({ cartCount = 0, onCartClick }) {
      NAV LINKS (FIXED)
   ========================= */
   const navs = [
-    { name: "Dashboard", path: "" },
-    { name: "Menu", path: "menu" },
-    { name: "Orders", path: "orders" }
+    { name: "Dashboard", path: "/customer" },
+    { name: "Menu", path: "/customer/menu" },
+    { name: "Orders", path: "/customer/orders" }
   ];
 
   return (
+    <>
     <nav className="sticky top-0 z-[50000] bg-white/90 backdrop-blur-xl border-b border-gray-100 px-6 xl:px-10 py-5">
 
       <div className="flex items-center justify-between">
@@ -113,7 +135,7 @@ export default function Navbar({ cartCount = 0, onCartClick }) {
         <div className="flex items-center gap-14">
 
           <Link
-            to=""
+            to="/customer"
             className="flex items-center gap-4"
           >
             <img
@@ -158,7 +180,7 @@ export default function Navbar({ cartCount = 0, onCartClick }) {
         <div className="flex items-center gap-4">
 
           {/* SEARCH */}
-          <button className="w-12 h-12 rounded-full hover:bg-gray-100 flex items-center justify-center">
+          <button onClick={() => setOpenSearch(s => !s)} className="w-12 h-12 rounded-full hover:bg-gray-100 flex items-center justify-center">
             <Search size={20} />
           </button>
 
@@ -191,7 +213,7 @@ export default function Navbar({ cartCount = 0, onCartClick }) {
                     <div
                       key={n.id}
                       onClick={() => {
-                        navigate("orders");
+                        navigate("/customer/orders");
                         setOpenNotif(false);
                       }}
                       className="p-2 hover:bg-gray-100 rounded cursor-pointer"
@@ -225,46 +247,21 @@ export default function Navbar({ cartCount = 0, onCartClick }) {
 
             <button
               onClick={() => setOpenAccount(!openAccount)}
-              className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center"
+              className="w-12 h-12 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center hover:border-[#d4af37] transition-all"
             >
-              <User size={20} />
+              <User size={20} className="text-gray-700" />
             </button>
-
             {openAccount && (
-              <div className="absolute right-0 top-[65px] w-[220px] bg-white border rounded-xl shadow-xl p-2">
-
-                <button
-                  onClick={() => {
-                    navigate("/pastry_system/customer/orders");
-                    setOpenAccount(false);
-                  }}
-                  className="w-full text-left p-2 hover:bg-gray-100 rounded"
-                >
-                  My Orders
-                </button>
-
-                <button
-                  onClick={() => {
-                    navigate("/pastry_system/customer/menu");
-                    setOpenAccount(false);
-                  }}
-                  className="w-full text-left p-2 hover:bg-gray-100 rounded"
-                >
-                  Menu
-                </button>
-
-                <button
-                  onClick={() => {
-                    window.location.href = "http://localhost/pastry_system/login.php";
-                  }}
-                  className="w-full text-left p-2 text-red-500 hover:bg-red-50 rounded"
-                >
-                  Logout
-                </button>
-
+              <div className="absolute right-0 top-[65px] w-[240px] bg-white border border-gray-100 rounded-[28px] shadow-2xl overflow-hidden">
+                <div className="px-5 py-4 border-b border-gray-100">
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-gray-400">Customer Account</p>
+                  <h3 className="text-[16px] text-black mt-1 font-semibold">{user?.name || 'Welcome Back'}</h3>
+                </div>
+                <div className="p-2">
+                  {/* Account actions can be added here */}
+                </div>
               </div>
             )}
-
           </div>
 
         </div>
@@ -272,5 +269,6 @@ export default function Navbar({ cartCount = 0, onCartClick }) {
       </div>
 
     </nav>
+    </>
   );
 }

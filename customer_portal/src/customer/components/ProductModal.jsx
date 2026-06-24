@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, ShoppingBag } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 export default function ProductModal({ isOpen, onClose, product, allCakes, onAddToCart }) {
   const [selectedDrink, setSelectedDrink] = useState('Iced Tea');

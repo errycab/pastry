@@ -41,6 +41,7 @@ try {
     $longitude = floatval($data['longitude'] ?? 0);
     $customer  = mysqli_real_escape_string($conn, $data['customer'] ?? '');
     $email     = mysqli_real_escape_string($conn, $data['email'] ?? '');
+    $user_id   = intval($data['user_id'] ?? 0); // Capture user_id from frontend
 
     $hasCustomer = false;
     $hasEmail = false;
@@ -70,8 +71,8 @@ try {
         $hasEmail = true;
     }
 
-    // Build insert fields dynamically so this API still works if the orders table lacks customer/email columns.
-    $fields = ['items', 'subtotal', 'delivery_fee', 'total', 'method', 'payment', 'address', 'phone', 'latitude', 'longitude'];
+    // Build insert fields dynamically so this API still works if the orders table lacks customer/email/user_id columns.
+    $fields = ['items', 'subtotal', 'delivery_fee', 'total', 'method', 'payment', 'address', 'phone', 'lat', 'lng'];
     $values = ["'$items'", "'$subtotal'", "'$delivery'", "'$total'", "'$method'", "'$payment'", "'$address'", "'$phone'", "'$latitude'", "'$longitude'"];
 
     if ($hasCustomer && $customer !== '') {
@@ -82,6 +83,18 @@ try {
     if ($hasEmail && $email !== '') {
         $fields[] = 'email';
         $values[] = "'$email'";
+    }
+
+    // Check if user_id column exists and add if provided
+    $hasUserId = false;
+    $userIdCheckRes = mysqli_query($conn, "SHOW COLUMNS FROM orders LIKE 'user_id'");
+    if ($userIdCheckRes && mysqli_num_rows($userIdCheckRes) > 0) {
+        $hasUserId = true;
+    }
+    
+    if ($hasUserId && $user_id > 0) {
+        $fields[] = 'user_id';
+        $values[] = $user_id;
     }
 
     $sql = sprintf(
@@ -100,6 +113,12 @@ try {
     }
 
 } catch (Exception $e) {
+    // Log error to file for debugging
+    @file_put_contents(__DIR__ . '/api_orders_errors.log', 
+        date('c') . " - " . $e->getMessage() . "\n", 
+        FILE_APPEND
+    );
+    http_response_code(400);
     echo json_encode([
         "status" => "error",
         "message" => $e->getMessage()

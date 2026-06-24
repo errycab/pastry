@@ -1,8 +1,9 @@
 {
-  "homepage": "http://localhost/pastry_system/customer/",
+  "homepage": "/Capstone--Development/customer/",
   "name": "customer_portal",
   "version": "0.1.0",
   "private": true,
+  "proxy": "http://localhost",
   "dependencies": {
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
@@ -44,6 +45,7 @@
   },
   "devDependencies": {
     "autoprefixer": "^10.5.0",
+    "http-proxy-middleware": "^4.0.0",
     "postcss": "^8.5.14",
     "tailwindcss": "^4.2.4"
   }

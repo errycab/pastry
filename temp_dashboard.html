@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login — Pastry Project</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#fff7f8,#ffe3eb);font-family:'DM Sans',sans-serif}
+        .card{width:100%;max-width:420px;background:#ffffffcc;border-radius:24px;padding:36px;box-shadow:0 24px 60px rgba(0,0,0,.12)}
+        h1{margin:0 0 8px;font-size:32px}
+        p{margin:0 0 24px;color:#666}
+        .input-group{margin-bottom:18px}
+        label{display:block;margin-bottom:10px;font-size:13px;color:#444}
+        input{width:100%;padding:14px 16px;border:1px solid #ddd;border-radius:14px;font-size:15px;outline:none}
+        input:focus{border-color:#d4af37;box-shadow:0 0 0 6px rgba(212,175,55,.12)}
+        button{width:100%;border:none;border-radius:14px;padding:14px 16px;background:#111;color:#fff;font-size:14px;cursor:pointer}
+        .message{margin-bottom:16px;padding:14px;border-radius:14px;font-size:14px}
+        .error{background:#fff1f1;color:#b02a37}
+        .success{background:#effff1;color:#088a18}
+        .bottom{margin-top:20px;text-align:center;font-size:14px;color:#666}
+        .bottom a{color:#d4af37;text-decoration:none;font-weight:600}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Login</h1>
+        <p>Sign in to continue to the Pastry Project dashboard.</p>
+
+                
+        <form method="POST" action="http://127.0.0.1:8000/login.php">
+            <input type="hidden" name="_token" value="aOrPOCj2Y9sMfltIeyk7lZBzKvfWjgTopkLWrAV5" autocomplete="off">            <div class="input-group">
+                <label for="email">Email</label>
+                <input id="email" type="email" name="email" value="" required autofocus>
+            </div>
+            <div class="input-group">
+                <label for="password">Password</label>
+                <input id="password" type="password" name="password" required>
+            </div>
+            <button type="submit">Sign In</button>
+        </form>
+
+        <div class="bottom">
+            Don't have an account? <a href="http://127.0.0.1:8000/register.php">Register</a>
+        </div>
+    </div>
+</body>
+</html>

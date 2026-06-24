@@ -220,7 +220,7 @@ body{
 
 <h1 class="page-title">Checkout</h1>
 
-<form method="POST" action="place_order.php">
+<form method="POST" action="customer/place_order.php">
 
 <div class="checkout-grid">
 

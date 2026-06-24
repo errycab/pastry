@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/cors.php';
 session_start();
 
 require_once '../includes/data.php';
@@ -521,23 +522,28 @@ Order Summary
 <?php
 
 $img =
-    $item['product']['image'] ?? '';
+    trim($item['product']['image'] ?? '');
 
-/* FIX IMAGE PATH */
-if (!empty($img)) {
+$path = '';
 
-    if (str_contains($img, 'uploads/')) {
+if ($img !== '') {
 
-        $path = "../" . $img;
+    if (str_starts_with($img, '../')) {
+
+        $path = $img;
+
+    } elseif (str_starts_with($img, '/uploads/')) {
+
+        $path = '..' . $img;
+
+    } elseif (str_contains($img, 'uploads/')) {
+
+        $path = '../' . ltrim($img, '/\\');
 
     } else {
 
-        $path = "uploads/" . $img;
+        $path = '../uploads/' . ltrim($img, '/\\');
     }
-
-} else {
-
-    $path = '';
 }
 
 ?>

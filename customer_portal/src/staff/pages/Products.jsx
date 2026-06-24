@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLocation, useNavigate } from "react-router-dom";
+import { Search } from "lucide-react";
 import StaffNavbar from "../components/StaffNavbar";
-
-const BASE = "http://localhost/GitHub/Capstone--Development";
+import { BASE, STAFF_BASE } from "../../services/config";
 
 export default function Products() {
 
@@ -13,6 +14,10 @@ export default function Products() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [qty, setQty] = useState("");
   const [updateError, setUpdateError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const location = useLocation();
+  const navigate = useNavigate();
 
   // ⭐ NEW: CATEGORY FILTER
   const [activeCat, setActiveCat] = useState("All");
@@ -25,7 +30,7 @@ export default function Products() {
     setLoading(true);
     setFetchError(null);
 
-    fetch(`${BASE}/staff/api_products.php?action=list`)
+    fetch(`${STAFF_BASE}/api_products.php?action=list`)
       .then(res => res.json())
       .then(data => {
 
@@ -49,6 +54,17 @@ export default function Products() {
     fetchProducts();
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    setSearchTerm(params.get("search") || "");
+  }, [location.search]);
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    const trimmed = searchTerm.trim();
+    navigate(`/staff/products${trimmed ? `?search=${encodeURIComponent(trimmed)}` : ""}`);
+  };
+
   /* =========================
      UPDATE STOCK
   ========================= */
@@ -61,7 +77,7 @@ export default function Products() {
       return;
     }
 
-    fetch(`${BASE}/staff/api_update_stocks.php`, {
+    fetch(`${STAFF_BASE}/api_update_stocks.php`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -98,13 +114,19 @@ export default function Products() {
   /* =========================
      FILTER PRODUCTS
   ========================= */
-  const filteredProducts =
-    activeCat === "All"
-      ? products
-      : products.filter(
-          (p) =>
-            p.category?.toLowerCase() === activeCat.toLowerCase()
-        );
+  const filteredProducts = products.filter((p) => {
+    const matchesCategory =
+      activeCat === "All" ||
+      p.category?.toLowerCase() === activeCat.toLowerCase();
+
+    const query = searchTerm.trim().toLowerCase();
+    const matchesSearch =
+      !query ||
+      p.name?.toLowerCase().includes(query) ||
+      p.category?.toLowerCase().includes(query);
+
+    return matchesCategory && matchesSearch;
+  });
 
   const categories = ["All", "Cakes", "Meals", "Pasta", "Starter"];
 
@@ -127,23 +149,58 @@ export default function Products() {
         </div>
 
         {/* =========================
-            CATEGORY FILTER (NEW)
+            CATEGORY FILTER + SEARCH
         ========================= */}
-        <div className="flex flex-wrap gap-2 mb-8">
+        <div className="flex flex-col gap-4 mb-8 lg:flex-row lg:items-center lg:justify-between">
 
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setActiveCat(cat)}
-              className={`px-5 py-2 rounded-full text-xs tracking-widest border transition ${
-                activeCat === cat
-                  ? "bg-black text-white"
-                  : "bg-white text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
+          <div className="flex flex-wrap gap-2">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setActiveCat(cat)}
+                className={`px-5 py-2 rounded-full text-xs tracking-widest border transition ${
+                  activeCat === cat
+                    ? "bg-black text-white"
+                    : "bg-white text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          <form onSubmit={handleSearchSubmit} className="w-full max-w-md">
+            <label className="sr-only" htmlFor="staff-product-search">
+              Search products
+            </label>
+            <div className="relative">
+              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                id="staff-product-search"
+                type="search"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search products"
+                className="w-full pl-10 pr-28 py-3 rounded-full border border-gray-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-black"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm("")}
+                  className="absolute right-20 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  aria-label="Clear search"
+                >
+                  ✕
+                </button>
+              )}
+              <button
+                type="submit"
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-black text-white px-4 py-2 rounded-full text-[10px] uppercase tracking-[0.2em]"
+              >
+                Go
+              </button>
+            </div>
+          </form>
 
         </div>
 
@@ -177,12 +234,14 @@ export default function Products() {
             >
 
               {/* IMAGE */}
-              <div className="h-40 bg-gray-100 overflow-hidden">
-                <img
-                  src={`${BASE}/uploads/${product.image}`}
-                  className="w-full h-full object-cover hover:scale-105 transition duration-300"
-                  alt={product.name}
-                />
+              <div className="flex justify-center pt-6 bg-gray-100">
+                <div className="w-24 h-24 md:w-28 md:h-28 overflow-hidden rounded-full bg-white shadow-inner border border-gray-50">
+                  <img
+                    src={`${BASE}/uploads/${product.image}`}
+                    className="w-full h-full object-cover"
+                    alt={product.name}
+                  />
+                </div>
               </div>
 
               {/* CONTENT */}
